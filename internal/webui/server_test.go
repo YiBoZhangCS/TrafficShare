@@ -60,6 +60,12 @@ func TestLocalHostAndCSRFProtection(t *testing.T) {
 	if !bytes.Contains(w.Body.Bytes(), []byte(`id="operationOverlay"`)) {
 		t.Fatal("long-running operation progress overlay is missing")
 	}
+	if bytes.Contains(w.Body.Bytes(), []byte(`class="topbar"`)) || bytes.Contains(w.Body.Bytes(), []byte(`id="pageTitle"`)) {
+		t.Fatal("duplicate fixed page heading returned")
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`class="sidebar-status"`)) {
+		t.Fatal("global status was not moved into the sidebar")
+	}
 	r = httptest.NewRequest(http.MethodGet, "http://127.0.0.1:9080/assets/guided.css", nil)
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)

@@ -26,21 +26,19 @@
         <button class="nav-item" data-page="settings"><span>◇</span>设置</button>
         <button class="nav-item" data-page="diagnostics"><span>⌁</span>帮助与诊断</button>
       </nav>
+      <div class="sidebar-status" aria-label="运行状态">
+        <div class="sidebar-status-row">
+          <span id="serverHealth" class="health"><i></i><span>检测服务器</span></span>
+          <button id="refreshAll" class="icon-button" title="刷新全部状态" aria-label="刷新全部状态">↻</button>
+        </div>
+        <span id="roleBadge" class="chip neutral">未配置</span>
+      </div>
       <div class="sidebar-foot">
         <div class="privacy-dot"></div><div><strong>可安全关闭</strong><span>关闭窗口会断开活动连接并恢复网络</span></div>
       </div>
     </aside>
 
     <main>
-      <header class="topbar">
-        <div><p class="eyebrow" id="pageEyebrow">WORKSPACE</p><h1 id="pageTitle">运行概览</h1></div>
-        <div class="top-actions">
-          <span id="roleBadge" class="chip neutral">未配置</span>
-          <span id="serverHealth" class="health"><i></i><span>检测服务器</span></span>
-          <button id="refreshAll" class="icon-button" title="刷新">↻</button>
-        </div>
-      </header>
-
       <div class="content">
         <section id="overview" class="page active">
           <div id="welcomeBanner" class="hero">

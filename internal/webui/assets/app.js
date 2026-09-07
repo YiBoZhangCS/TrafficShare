@@ -56,8 +56,6 @@ async function withOperation(button, title, details, task) {
 function gotoPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-  const names={overview:['WORKSPACE','运行概览'],account:['IDENTITY','账户与设备'],settings:['CONNECTION','连接设置'],provider:['PROVIDER','共享管理'],consumer:['CONSUMER','可用流量'],session:['SESSION','当前会话'],diagnostics:['DIAGNOSTICS','诊断与日志']};
-  const [eyebrow,title]=names[page]||names.overview; setText('pageEyebrow',eyebrow); setText('pageTitle',title);
   if (page==='provider') providerShares(); if(page==='consumer') shares(); if(page==='session') refreshStatus(); if(page==='diagnostics') doctor();
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>gotoPage(b.dataset.page)));
