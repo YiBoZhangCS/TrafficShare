@@ -1,5 +1,5 @@
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
-const state = {settings:null, doctor:null, status:null, serverOnline:false, currentSession:'', initPreviewed:false, previewedShares:new Set()};
+const state = {settings:null, doctor:null, status:null, serverOnline:false, busy:false, currentSession:'', initPreviewed:false, previewedShares:new Set()};
 const $ = id => document.getElementById(id);
 
 async function api(path, method='GET', body) {
@@ -28,7 +28,8 @@ function humanError(error) {
     ['conflict','当前设备已有活动连接，或资源发生冲突'],
     ['quota exhausted','共享额度已经用尽'],
     ['authentication required','请先登录'],
-    ['invalid or expired token','登录已过期，请重新登录']
+    ['invalid or expired token','登录已过期，请重新登录'],
+    ['receiver account not found','没有找到接收方账号；请让同学先连接同一个控制服务器完成注册，再输入他的精确用户名']
   ];
   for (const [needle, translated] of known) if (text.includes(needle)) return translated;
   return text;
@@ -42,6 +43,15 @@ function formatBytes(value) {
 function formatDate(value) { if(!value) return '—'; const d=new Date(value); return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-CN',{hour12:false}); }
 function statusText(value) { return ({active:'使用中',stopped:'已停止',expired:'已到期',exhausted:'额度用尽',revoked:'已撤销',disconnected:'已断开',pending:'准备中'})[value] || value || '未知'; }
 function setText(id, value) { const el=$(id); if(el) el.textContent=value ?? '—'; }
+
+async function withOperation(button, title, details, task) {
+  if(state.busy){toast('已有操作正在执行，请等待完成',true);return;}
+  state.busy=true; const oldText=button.textContent, oldDisabled=button.disabled; button.disabled=true; button.textContent='处理中…';
+  $('operationTitle').textContent=title; $('operationDetail').textContent=details[0]; $('operationProgress').className=''; $('operationOverlay').hidden=false; document.body.setAttribute('aria-busy','true');
+  let index=0; const timer=setInterval(()=>{$('operationDetail').textContent=details[Math.min(++index,details.length-1)]},2600);
+  try { const result=await task(); $('operationProgress').className='complete'; $('operationDetail').textContent='操作已完成，正在刷新状态…'; await new Promise(resolve=>setTimeout(resolve,380)); return result; }
+  finally { clearInterval(timer); $('operationOverlay').hidden=true; document.body.removeAttribute('aria-busy'); state.busy=false; button.textContent=oldText; button.disabled=button.id==='disconnectButton'?!state.currentSession:oldDisabled; renderSteps(); }
+}
 
 function gotoPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));
@@ -135,7 +145,7 @@ function renderPlan(target, preview) {
   actions.forEach((a,i)=>{const row=document.createElement('div');row.className='plan-row';row.innerHTML=`<i>${i+1}</i><div><strong></strong><span></span></div>`;row.querySelector('strong').textContent=a.description;row.querySelector('span').textContent=a.resource||'';root.append(row)});
 }
 $('previewInit').onclick=async()=>{try{const v=await api('/api/provider/init','POST',{apply:false});renderPlan('initSummary',v);state.initPreviewed=true;$('applyInit').disabled=false;toast('预览完成，尚未修改网络')}catch(e){toast(humanError(e),true)}};
-$('applyInit').onclick=async()=>{if(!state.initPreviewed||!confirm('将以管理员权限创建 WireGuard、转发、NAT 与防火墙规则。确认继续？'))return;try{const v=await api('/api/provider/init','POST',{apply:true});renderPlan('initSummary',v);state.initPreviewed=false;$('providerState').textContent='网关运行中';$('providerState').className='chip success';$('applyInit').disabled=true;toast('Provider 网关初始化完成');await refreshStatus()}catch(e){toast(humanError(e),true)}};
+$('applyInit').onclick=async()=>{if(!state.initPreviewed||!confirm('将以管理员权限创建 WireGuard、转发、NAT 与防火墙规则。确认继续？'))return;try{await withOperation($('applyInit'),'正在初始化 Provider 网关',['正在准备 WireGuard 配置…','正在启动安全隧道…','正在启用 IPv4 转发与 NAT…','正在应用最小范围防火墙规则…'],async()=>{const v=await api('/api/provider/init','POST',{apply:true});renderPlan('initSummary',v);state.initPreviewed=false;$('providerState').textContent='网关运行中';$('providerState').className='chip success';await refreshStatus()});toast('Provider 网关初始化完成')}catch(e){toast(humanError(e),true)}};
 $('shareButton').onclick=async()=>{try{const quota=Number($('quota').value),hours=Number($('hours').value);if(!(quota>0)||!(hours>0))throw new Error('额度和有效期必须大于 0');await api('/api/share','POST',{receiver:$('receiver').value.trim(),quota_bytes:Math.round(quota*1e9),hours});$('receiver').value='';toast('私有共享已创建');await providerShares()}catch(e){toast(humanError(e),true)}};
 
 function progress(used,total){return Math.min(100,Math.max(0,total?used/total*100:0));}
@@ -148,11 +158,11 @@ $('refreshShares').onclick=shares;
 async function connect(shareID,apply){if(apply&&!state.previewedShares.has(shareID)){toast('请先预览网络改动',true);return false;}if(apply&&!confirm('连接将修改本机路由、防火墙和 WireGuard 配置。确认继续？'))return false;try{const v=await api('/api/connect','POST',{share_id:shareID,apply});$('sessionOutput').textContent=JSON.stringify(v,null,2);if(apply){state.currentSession=v.session.id;toast('连接成功，IPv4 流量正在通过 Provider');gotoPage('session');await refreshStatus();}else{toast('预览完成，未修改网络；现在可以点击“连接”');}return true;}catch(e){toast(humanError(e),true);return false;}}
 
 $('statusButton').onclick=()=>refreshStatus(true);
-$('disconnectButton').onclick=async()=>{if(!state.currentSession||!confirm('断开隧道并恢复原始网络？'))return;try{await api('/api/disconnect','POST',{session_id:state.currentSession,apply:true});state.currentSession='';toast('已断开，原始网络已恢复');await refreshStatus()}catch(e){toast(humanError(e),true)}};
+$('disconnectButton').onclick=async()=>{if(!state.currentSession||!confirm('断开隧道并恢复原始网络？'))return;try{await withOperation($('disconnectButton'),'正在安全断开',['正在停止 WireGuard 隧道…','正在恢复原始路由和 DNS…','正在清理 TrafficShare 防火墙与 NAT…','正在确认网络恢复…'],async()=>{await api('/api/disconnect','POST',{session_id:state.currentSession,apply:true});state.currentSession='';await refreshStatus()});toast('已断开，原始网络已恢复')}catch(e){toast(humanError(e),true)}};
 $('doctorButton').onclick=()=>doctor(true);
 $('logsButton').onclick=async()=>{try{const v=await api('/api/logs');const lines=String(v.logs||'暂无日志').trim().split(/\r?\n/);$('logsOutput').textContent=lines.slice(-250).join('\n');toast('日志已刷新')}catch(e){toast(humanError(e),true)}};
 $('refreshAll').onclick=()=>refreshAll(true);
 
 async function refreshAll(showToast=false){await Promise.allSettled([loadSettings(),checkServer(),doctor(),refreshStatus()]);if(state.settings?.role==='provider')providerShares();else shares();if(showToast)toast('界面已刷新');}
-async function boot(){try{await loadSettings();await Promise.allSettled([checkServer(),doctor(),refreshStatus()]);if(state.settings.role==='provider')providerShares();else shares();renderSteps();}catch(e){toast(humanError(e),true)}setInterval(()=>{checkServer();refreshStatus();},10000)}
+async function boot(){try{await loadSettings();await Promise.allSettled([checkServer(),doctor(),refreshStatus()]);if(state.settings.role==='provider')providerShares();else shares();renderSteps();}catch(e){toast(humanError(e),true)}setInterval(()=>{if(!state.busy){checkServer();refreshStatus()}},10000)}
 boot();

@@ -57,6 +57,9 @@ func TestLocalHostAndCSRFProtection(t *testing.T) {
 	if !bytes.Contains(w.Body.Bytes(), []byte(`id="primaryAction"`)) || !bytes.Contains(w.Body.Bytes(), []byte("按顺序完成这些步骤")) {
 		t.Fatal("guided first-run UI is missing")
 	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`id="operationOverlay"`)) {
+		t.Fatal("long-running operation progress overlay is missing")
+	}
 	r = httptest.NewRequest(http.MethodGet, "http://127.0.0.1:9080/assets/guided.css", nil)
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)

@@ -32,6 +32,8 @@ Windows x64 用户可直接下载仓库中的 [`release/TrafficShare-Windows-x64
 
 如果 Windows 防火墙阻止 B 访问 A 的 8787/TCP，需要在 A 上为可信校园网范围放行该端口。不要把本机控制服务器直接暴露到公网。
 
+创建共享前，B 必须已经把控制服务器设置为 A 的地址，并在该服务器完成账号注册。A 输入的是 B 的 TrafficShare 用户名，不是 Windows 账户名或计算机名；否则界面会提示“没有找到接收方账号”。
+
 ## 发布包中的程序
 
 - `TrafficShare-Host.exe`：本机控制服务器 + Provider，一键启动，当前双机测试使用它。

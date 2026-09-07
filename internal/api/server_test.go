@@ -184,3 +184,15 @@ func TestPreviewIsReadOnlyAndConcurrentConsumersGetUniqueAddresses(t *testing.T)
 		t.Fatalf("sessions were not assigned to the same available provider")
 	}
 }
+
+func TestCreateShareExplainsMissingReceiverAccount(t *testing.T) {
+	s, db := testServer(t)
+	defer db.Close()
+	owner := registerLogin(t, s, "only-owner")
+	w := request(t, s.Handler(), http.MethodPost, "/v1/shares", owner, map[string]any{
+		"receiver_username": "not-registered", "quota_bytes": int64(1000), "expires_at": s.now().Add(time.Hour),
+	})
+	if w.Code != http.StatusNotFound || !bytes.Contains(w.Body.Bytes(), []byte("receiver account not found")) {
+		t.Fatalf("missing receiver response is unclear: %d %s", w.Code, w.Body.String())
+	}
+}

@@ -343,6 +343,8 @@ func writeDomainError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, database.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden")
+	case errors.Is(err, database.ErrReceiverNotFound):
+		writeError(w, http.StatusNotFound, "receiver account not found; ask the recipient to register on this control server first")
 	case errors.Is(err, database.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not found")
 	case errors.Is(err, database.ErrConflict):

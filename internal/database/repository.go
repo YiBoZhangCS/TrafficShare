@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("not found")
-	ErrForbidden   = errors.New("forbidden")
-	ErrConflict    = errors.New("conflict")
-	ErrUnavailable = errors.New("provider unavailable")
-	ErrQuota       = errors.New("quota exhausted")
+	ErrNotFound         = errors.New("not found")
+	ErrReceiverNotFound = errors.New("receiver account not found")
+	ErrForbidden        = errors.New("forbidden")
+	ErrConflict         = errors.New("conflict")
+	ErrUnavailable      = errors.New("provider unavailable")
+	ErrQuota            = errors.New("quota exhausted")
 )
 
 type Repository struct{ DB *DB }
@@ -137,7 +138,7 @@ func (r Repository) CreateShare(ctx context.Context, ownerID, receiverUsername s
 	}
 	var receiverID string
 	if err := r.DB.SQL.QueryRowContext(ctx, `SELECT id FROM users WHERE username=?`, receiverUsername).Scan(&receiverID); errors.Is(err, sql.ErrNoRows) {
-		return Share{}, ErrNotFound
+		return Share{}, ErrReceiverNotFound
 	} else if err != nil {
 		return Share{}, err
 	}
