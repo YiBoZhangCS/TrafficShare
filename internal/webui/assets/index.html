@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="__CSRF__">
+  <meta name="color-scheme" content="light">
+  <title>TrafficShare 控制台</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 10h14a9 9 0 0 1 0 18H17a6 6 0 0 0 0 12h18"/><circle cx="13" cy="10" r="4"/><circle cx="35" cy="40" r="4"/></svg></div>
+        <div><strong>TrafficShare</strong><span>安全流量共享</span></div>
+      </div>
+      <nav id="navigation" aria-label="主导航">
+        <button class="nav-item active" data-page="overview"><span>⌂</span>概览</button>
+        <button class="nav-item" data-page="account"><span>◎</span>账户与设备</button>
+        <button class="nav-item" data-page="settings"><span>◇</span>连接设置</button>
+        <button class="nav-item provider-only" data-page="provider"><span>↗</span>共享管理</button>
+        <button class="nav-item consumer-only" data-page="consumer"><span>↙</span>可用流量</button>
+        <button class="nav-item" data-page="session"><span>◉</span>当前会话</button>
+        <button class="nav-item" data-page="diagnostics"><span>⌁</span>诊断与日志</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="privacy-dot"></div><div><strong>控制面与数据面分离</strong><span>管理界面仅监听 127.0.0.1</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow" id="pageEyebrow">WORKSPACE</p><h1 id="pageTitle">运行概览</h1></div>
+        <div class="top-actions">
+          <span id="roleBadge" class="chip neutral">未配置</span>
+          <span id="serverHealth" class="health"><i></i><span>检测服务器</span></span>
+          <button id="refreshAll" class="icon-button" title="刷新">↻</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section id="overview" class="page active">
+          <div id="welcomeBanner" class="hero">
+            <div><p class="eyebrow">PRIVATE • CONTROLLED • DIRECT</p><h2>把授权设备的 IPv4 流量，安全地交给可信 Provider。</h2><p>业务流量直接通过 WireGuard 在设备之间传输，控制服务器只负责身份、授权、会话和配额。</p><div class="actions"><button class="primary" data-goto="settings">开始配置</button><button class="ghost" data-goto="diagnostics">检查本机环境</button></div></div>
+            <div class="route-visual" aria-label="流量路径"><span>B</span><b></b><span class="wg">WG</span><b></b><span>A</span><b></b><span>NET</span></div>
+          </div>
+          <div class="metrics">
+            <article><div class="metric-icon blue">◉</div><div><span>控制服务器</span><strong id="metricServer">检测中</strong><small id="metricServerURL">—</small></div></article>
+            <article><div class="metric-icon green">⌁</div><div><span>本机网络</span><strong id="metricNetwork">检测中</strong><small id="metricLAN">—</small></div></article>
+            <article><div class="metric-icon violet">◇</div><div><span>设备身份</span><strong id="metricIdentity">未登录</strong><small id="metricDevice">尚未注册设备</small></div></article>
+            <article><div class="metric-icon amber">↗</div><div><span>当前会话</span><strong id="metricSession">未连接</strong><small id="metricTraffic">0 B</small></div></article>
+          </div>
+          <div class="two-column">
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">QUICK START</p><h3>下一步</h3></div></div><div id="nextSteps" class="step-list"></div></article>
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">SAFETY</p><h3>安全边界</h3></div></div><ul class="safety-list"><li><i>✓</i>不读取或共享校园网账号、密码与 Cookie</li><li><i>✓</i>WireGuard 私钥永不离开本机</li><li><i>✓</i>所有网络改动均有状态快照并可恢复</li><li><i>✓</i>控制 UI 只允许本机访问</li></ul></article>
+          </div>
+        </section>
+
+        <section id="account" class="page">
+          <div class="section-intro"><div><p class="eyebrow">IDENTITY</p><h2>账户与设备</h2><p>登录控制服务器，然后将这台电脑注册为 Provider 或 Consumer。</p></div><span id="authState" class="chip neutral">未登录</span></div>
+          <div class="two-column">
+            <article class="panel"><div class="panel-head"><div><h3>登录控制服务器</h3><p>首次使用可以直接注册。密码至少 10 个字符。</p></div></div>
+              <label>用户名<input id="username" autocomplete="username" placeholder="例如 zhangsan"></label>
+              <label>密码<input id="password" type="password" autocomplete="current-password" placeholder="至少 10 个字符"></label>
+              <div class="actions"><button id="loginButton" class="primary">登录</button><button id="registerButton" class="secondary">注册并登录</button></div>
+            </article>
+            <article class="panel"><div class="panel-head"><div><h3>本机设备</h3><p>自动检测 LAN 地址并生成长期 WireGuard 密钥。</p></div></div>
+              <dl class="details"><div><dt>当前用户</dt><dd id="accountUsername">—</dd></div><div><dt>设备名称</dt><dd id="accountDeviceName">—</dd></div><div><dt>设备 ID</dt><dd id="accountDeviceID">—</dd></div><div><dt>设备角色</dt><dd id="accountRole">—</dd></div></dl>
+              <button id="deviceButton" class="primary wide">注册 / 更新这台设备</button>
+            </article>
+          </div>
+        </section>
+
+        <section id="settings" class="page">
+          <div class="section-intro"><div><p class="eyebrow">CONNECTION</p><h2>连接设置</h2><p>本机 Host 默认使用本地控制服务器；迁移云端后只需更换服务器 URL。</p></div></div>
+          <article class="panel form-panel">
+            <div class="form-grid">
+              <label>设备角色<select id="role"><option value="provider">Provider · 提供网络</option><option value="consumer">Consumer · 使用网络</option></select><small id="roleHint">角色变更后需要重新登录并注册设备。</small></label>
+              <label>设备名称<input id="deviceName" maxlength="80" placeholder="默认使用 Windows 计算机名"></label>
+              <label class="span-2">控制服务器 URL<input id="serverURL" inputmode="url" placeholder="http://127.0.0.1:8787"><small>云端部署应使用 HTTPS，例如 https://traffic.example.com。</small></label>
+            </div>
+            <div class="callout"><span>i</span><div><strong id="deploymentMode">独立 Agent</strong><p id="configPath">配置将保存在 ProgramData。</p></div></div>
+            <div class="actions"><button id="saveSettings" class="primary">保存设置</button><button id="testServer" class="secondary">测试服务器</button></div>
+          </article>
+        </section>
+
+        <section id="provider" class="page">
+          <div class="section-intro"><div><p class="eyebrow">PROVIDER</p><h2>共享管理</h2><p>初始化网关后，可为多个指定用户创建私有流量额度。</p></div><span id="providerState" class="chip neutral">尚未初始化</span></div>
+          <div class="two-column provider-layout">
+            <article class="panel"><div class="panel-head"><div><h3>网络网关</h3><p>自动创建 WireGuard、IPv4 转发、NAT 和最小范围防火墙规则。</p></div></div>
+              <div class="actions"><button id="previewInit" class="secondary">预览改动</button><button id="applyInit" class="primary" disabled>应用初始化</button></div><div id="initSummary" class="result empty">尚未生成预览</div>
+            </article>
+            <article class="panel"><div class="panel-head"><div><h3>创建私有共享</h3><p>仅指定用户名可以看到并使用。</p></div></div>
+              <label>共享给<input id="receiver" placeholder="Consumer 用户名"></label>
+              <div class="split"><label>额度（GB）<input id="quota" type="number" value="20" min="0.001" step="0.001"></label><label>有效期（小时）<input id="hours" type="number" value="24" min="1" max="8760"></label></div>
+              <button id="shareButton" class="primary wide">创建共享</button>
+            </article>
+          </div>
+          <article class="panel list-panel"><div class="panel-head"><div><h3>我的共享</h3><p>额度由 Provider 端可信 WireGuard 计数器统计。</p></div><button id="providerSharesButton" class="text-button">刷新</button></div><div id="providerShares" class="card-list"><div class="empty-state">登录并创建共享后显示在这里</div></div></article>
+        </section>
+
+        <section id="consumer" class="page">
+          <div class="section-intro"><div><p class="eyebrow">CONSUMER</p><h2>可用流量</h2><p>这里只显示明确授权给当前账户的私有共享。</p></div><button id="refreshShares" class="secondary">刷新列表</button></div>
+          <div id="shareList" class="offer-grid"><div class="empty-state panel">登录并注册设备后查看可用共享</div></div>
+        </section>
+
+        <section id="session" class="page">
+          <div class="section-intro"><div><p class="eyebrow">SESSION</p><h2>当前会话</h2><p>实时查看隧道、流量和配额；断开时自动恢复原网络。</p></div><button id="statusButton" class="secondary">刷新状态</button></div>
+          <article id="sessionCard" class="session-card idle"><div class="session-orb"><i></i></div><div class="session-copy"><span>连接状态</span><h3 id="sessionHeadline">当前没有活动会话</h3><p id="sessionDescription">选择一项授权流量并预览后即可连接。</p></div><button id="disconnectButton" class="danger" disabled>断开并恢复</button></article>
+          <div class="metrics session-metrics"><article><div><span>隧道</span><strong id="sessionTunnel">—</strong><small>WireGuard</small></div></article><article><div><span>接收</span><strong id="sessionRX">0 B</strong><small>Provider → 本机</small></div></article><article><div><span>发送</span><strong id="sessionTX">0 B</strong><small>本机 → Provider</small></div></article><article><div><span>剩余额度</span><strong id="sessionRemaining">—</strong><small id="sessionExpiry">—</small></div></article></div>
+          <details class="panel raw-panel"><summary>查看会话技术详情</summary><pre id="sessionOutput">暂无数据</pre></details>
+        </section>
+
+        <section id="diagnostics" class="page">
+          <div class="section-intro"><div><p class="eyebrow">DIAGNOSTICS</p><h2>诊断与日志</h2><p>只读诊断不会修改网络；日志不会记录密码、私钥或完整令牌。</p></div><div class="actions compact"><button id="doctorButton" class="secondary">运行诊断</button><button id="logsButton" class="secondary">刷新日志</button></div></div>
+          <div class="two-column diagnostics-grid"><article class="panel"><div class="panel-head"><h3>环境检查</h3></div><div id="doctorCards" class="check-list"></div><details><summary>查看原始诊断</summary><pre id="doctorOutput">等待诊断</pre></details></article><article class="panel log-panel"><div class="panel-head"><h3>最近日志</h3></div><pre id="logsOutput">等待读取</pre></article></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div id="toast" role="status" aria-live="polite"><span id="toastIcon">✓</span><span id="toastText"></span></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

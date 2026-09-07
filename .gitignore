@@ -1,0 +1,10 @@
+/bin/
+/dist/
+/.runtime/
+/.tools/
+/*.db
+/*.db-shm
+/*.db-wal
+/configs/local.json
+/configs/device.key
+*.log

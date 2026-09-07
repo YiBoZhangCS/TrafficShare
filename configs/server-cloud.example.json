@@ -1,0 +1,28 @@
+{
+  "server": {
+    "listen": "0.0.0.0:8787",
+    "database_path": "C:\\ProgramData\\TrafficShare\\trafficshare.db",
+    "log_path": "C:\\ProgramData\\TrafficShare\\logs\\server.jsonl",
+    "tls_cert_path": "C:\\ProgramData\\TrafficShare\\tls\\fullchain.pem",
+    "tls_key_path": "C:\\ProgramData\\TrafficShare\\tls\\private-key.pem",
+    "token_ttl": 86400000000000,
+    "heartbeat_ttl": 20000000000
+  },
+  "agent": {
+    "role": "consumer",
+    "server_url": "https://trafficshare.example.com:8787",
+    "ui_listen": "127.0.0.1:9081",
+    "state_dir": "C:\\ProgramData\\TrafficShare\\state",
+    "log_path": "C:\\ProgramData\\TrafficShare\\logs\\agent.jsonl",
+    "tunnel_name": "TrafficShare-Tunnel",
+    "key_path": "C:\\ProgramData\\TrafficShare\\keys\\device.key",
+    "poll_interval": 5000000000
+  },
+  "tunnel": {
+    "prefix": "10.66.0.0/24",
+    "provider_ip": "10.66.0.1/24",
+    "consumer_ip": "10.66.0.2/24",
+    "port": 51820,
+    "nat_name": "TrafficShare-NAT"
+  }
+}
