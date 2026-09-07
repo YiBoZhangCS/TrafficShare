@@ -32,6 +32,7 @@ func (r ExecRunner) Run(ctx context.Context, program string, args ...string) (Re
 	}
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, program, args...)
+	configureCommand(cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()

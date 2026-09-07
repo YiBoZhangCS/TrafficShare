@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light">
   <title>TrafficShare 控制台</title>
   <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/guided.css">
 </head>
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
@@ -17,16 +18,16 @@
         <div><strong>TrafficShare</strong><span>安全流量共享</span></div>
       </div>
       <nav id="navigation" aria-label="主导航">
-        <button class="nav-item active" data-page="overview"><span>⌂</span>概览</button>
-        <button class="nav-item" data-page="account"><span>◎</span>账户与设备</button>
-        <button class="nav-item" data-page="settings"><span>◇</span>连接设置</button>
-        <button class="nav-item provider-only" data-page="provider"><span>↗</span>共享管理</button>
-        <button class="nav-item consumer-only" data-page="consumer"><span>↙</span>可用流量</button>
-        <button class="nav-item" data-page="session"><span>◉</span>当前会话</button>
-        <button class="nav-item" data-page="diagnostics"><span>⌁</span>诊断与日志</button>
+        <button class="nav-item active" data-page="overview"><span>⌂</span>首页</button>
+        <button class="nav-item" data-page="account"><span>◎</span>账户</button>
+        <button class="nav-item provider-only" data-page="provider"><span>↗</span>提供流量</button>
+        <button class="nav-item consumer-only" data-page="consumer"><span>↙</span>使用流量</button>
+        <button class="nav-item" data-page="session"><span>◉</span>当前连接</button>
+        <button class="nav-item" data-page="settings"><span>◇</span>设置</button>
+        <button class="nav-item" data-page="diagnostics"><span>⌁</span>帮助与诊断</button>
       </nav>
       <div class="sidebar-foot">
-        <div class="privacy-dot"></div><div><strong>控制面与数据面分离</strong><span>管理界面仅监听 127.0.0.1</span></div>
+        <div class="privacy-dot"></div><div><strong>可安全关闭</strong><span>关闭窗口会断开活动连接并恢复网络</span></div>
       </div>
     </aside>
 
@@ -43,7 +44,7 @@
       <div class="content">
         <section id="overview" class="page active">
           <div id="welcomeBanner" class="hero">
-            <div><p class="eyebrow">PRIVATE • CONTROLLED • DIRECT</p><h2>把授权设备的 IPv4 流量，安全地交给可信 Provider。</h2><p>业务流量直接通过 WireGuard 在设备之间传输，控制服务器只负责身份、授权、会话和配额。</p><div class="actions"><button class="primary" data-goto="settings">开始配置</button><button class="ghost" data-goto="diagnostics">检查本机环境</button></div></div>
+            <div><p class="eyebrow" id="heroKicker">开始使用</p><h2 id="heroTitle">正在读取本机状态…</h2><p id="heroText">TrafficShare 会根据当前角色告诉你唯一的下一步，不需要记命令。</p><div class="actions"><button id="primaryAction" class="primary">继续</button><button class="ghost" data-goto="diagnostics">检查运行环境</button></div></div>
             <div class="route-visual" aria-label="流量路径"><span>B</span><b></b><span class="wg">WG</span><b></b><span>A</span><b></b><span>NET</span></div>
           </div>
           <div class="metrics">
@@ -52,8 +53,8 @@
             <article><div class="metric-icon violet">◇</div><div><span>设备身份</span><strong id="metricIdentity">未登录</strong><small id="metricDevice">尚未注册设备</small></div></article>
             <article><div class="metric-icon amber">↗</div><div><span>当前会话</span><strong id="metricSession">未连接</strong><small id="metricTraffic">0 B</small></div></article>
           </div>
-          <div class="two-column">
-            <article class="panel"><div class="panel-head"><div><p class="eyebrow">QUICK START</p><h3>下一步</h3></div></div><div id="nextSteps" class="step-list"></div></article>
+          <div class="two-column onboarding-grid">
+            <article class="panel guide-panel"><div class="panel-head"><div><p class="eyebrow">SETUP GUIDE</p><h3>按顺序完成这些步骤</h3><p>绿色对勾表示已经完成，点击未完成步骤即可前往。</p></div><span id="setupProgress" class="progress-count">0 / 4</span></div><div id="nextSteps" class="step-list"></div></article>
             <article class="panel"><div class="panel-head"><div><p class="eyebrow">SAFETY</p><h3>安全边界</h3></div></div><ul class="safety-list"><li><i>✓</i>不读取或共享校园网账号、密码与 Cookie</li><li><i>✓</i>WireGuard 私钥永不离开本机</li><li><i>✓</i>所有网络改动均有状态快照并可恢复</li><li><i>✓</i>控制 UI 只允许本机访问</li></ul></article>
           </div>
         </section>
@@ -88,6 +89,7 @@
 
         <section id="provider" class="page">
           <div class="section-intro"><div><p class="eyebrow">PROVIDER</p><h2>共享管理</h2><p>初始化网关后，可为多个指定用户创建私有流量额度。</p></div><span id="providerState" class="chip neutral">尚未初始化</span></div>
+          <div class="flow-strip"><div><b>1</b><span><strong>初始化网关</strong><small>先预览，再应用</small></span></div><i>→</i><div><b>2</b><span><strong>指定同学账号</strong><small>设置额度和有效期</small></span></div><i>→</i><div><b>3</b><span><strong>保持本软件运行</strong><small>自动心跳和统计流量</small></span></div></div>
           <div class="two-column provider-layout">
             <article class="panel"><div class="panel-head"><div><h3>网络网关</h3><p>自动创建 WireGuard、IPv4 转发、NAT 和最小范围防火墙规则。</p></div></div>
               <div class="actions"><button id="previewInit" class="secondary">预览改动</button><button id="applyInit" class="primary" disabled>应用初始化</button></div><div id="initSummary" class="result empty">尚未生成预览</div>
@@ -103,6 +105,7 @@
 
         <section id="consumer" class="page">
           <div class="section-intro"><div><p class="eyebrow">CONSUMER</p><h2>可用流量</h2><p>这里只显示明确授权给当前账户的私有共享。</p></div><button id="refreshShares" class="secondary">刷新列表</button></div>
+          <div class="flow-strip"><div><b>1</b><span><strong>选择授权</strong><small>确认 Provider 在线</small></span></div><i>→</i><div><b>2</b><span><strong>预览改动</strong><small>此时不会修改网络</small></span></div><i>→</i><div><b>3</b><span><strong>点击连接</strong><small>关闭前请安全断开</small></span></div></div>
           <div id="shareList" class="offer-grid"><div class="empty-state panel">登录并注册设备后查看可用共享</div></div>
         </section>
 

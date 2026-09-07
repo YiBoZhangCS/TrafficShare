@@ -21,6 +21,8 @@ type Mode struct {
 }
 
 func Run(ctx context.Context, mode Mode) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	if mode.Role != "provider" && mode.Role != "consumer" {
 		return fmt.Errorf("unsupported launcher role %q", mode.Role)
 	}
@@ -42,16 +44,16 @@ func Run(ctx context.Context, mode Mode) error {
 		return err
 	}
 	if mode.EmbeddedServer {
-		if err := ensureControlServer(ctx, cfg); err != nil {
+		if err := ensureControlServer(runCtx, cfg); err != nil {
 			return err
 		}
 	}
-	args := []string{"ui", "--config", configPath, "--role", mode.Role, "--open-browser"}
+	args := []string{"ui", "--config", configPath, "--role", mode.Role, "--desktop"}
 	if mode.EmbeddedServer {
 		args = append(args, "--server-url", cfg.Agent.ServerURL, "--embedded-server")
 	}
 	cli := agent.CLI{Stdout: io.Discard, Stderr: io.Discard, Stdin: os.Stdin, Runner: windowsnet.ExecRunner{}}
-	return cli.Run(ctx, args)
+	return cli.Run(runCtx, args)
 }
 
 func applyFirstRunDefaults(cfg *config.Config, role string) {

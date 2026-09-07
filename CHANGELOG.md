@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 - 2026-09-07
+
+- 将默认浏览器管理页升级为独立的 Microsoft Edge WebView2 桌面窗口。
+- 关闭桌面窗口会同步停止本地 UI、心跳监控和应用进程。
+- 所有 PowerShell/WireGuard 子进程使用 `CREATE_NO_WINDOW`，消除空白控制台闪现。
+- 首页改为角色驱动的四步向导，只突出当前下一步；简化导航并增加 Provider/Consumer 三步流程条。
+- Host 内嵌服务器地址锁定，减少误配置；未登录时禁用设备和网络操作。
+
 ## 1.0.0 - 2026-09-07
 
 - 新增 Host、Provider、Client 三个一键启动 Windows GUI 程序。

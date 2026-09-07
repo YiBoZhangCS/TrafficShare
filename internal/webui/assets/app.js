@@ -1,5 +1,5 @@
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
-const state = {settings:null, doctor:null, status:null, currentSession:'', initPreviewed:false, previewedShares:new Set()};
+const state = {settings:null, doctor:null, status:null, serverOnline:false, currentSession:'', initPreviewed:false, previewedShares:new Set()};
 const $ = id => document.getElementById(id);
 
 async function api(path, method='GET', body) {
@@ -52,10 +52,11 @@ function gotoPage(page) {
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>gotoPage(b.dataset.page)));
 document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>gotoPage(b.dataset.goto)));
+$('primaryAction').onclick=()=>gotoPage($('primaryAction').dataset.page||'account');
 
 function applySettings(s) {
   state.settings=s;
-  $('role').value=s.role; $('role').disabled=s.role_locked; $('serverURL').value=s.server_url; $('deviceName').value=s.device_name||'';
+  $('role').value=s.role; $('role').disabled=s.role_locked; $('serverURL').value=s.server_url; $('serverURL').disabled=s.embedded_server; $('deviceName').value=s.device_name||'';
   setText('roleHint',s.role_locked?'此启动器已锁定设备角色。':'角色或服务器变化后需要重新登录并注册。');
   setText('roleBadge',s.role==='provider'?'Provider · 提供网络':'Consumer · 使用网络'); $('roleBadge').className=`chip ${s.role}`;
   setText('deploymentMode',s.embedded_server?'本机控制服务器 + Provider':'独立 Agent · 可连接本地或云端服务器');
@@ -65,14 +66,15 @@ function applySettings(s) {
   setText('authState',s.authenticated?`已登录 · ${s.username}`:'未登录'); $('authState').className=`chip ${s.authenticated?'success':'neutral'}`;
   setText('accountUsername',s.username||'—'); setText('accountDeviceName',s.device_name||'使用 Windows 计算机名'); setText('accountDeviceID',s.device_id||'尚未注册'); setText('accountRole',s.role==='provider'?'Provider':'Consumer');
   setText('metricIdentity',s.authenticated?s.username:'未登录'); setText('metricDevice',s.device_id?`设备 ${s.device_id.slice(0,8)}…`:'尚未注册设备'); setText('metricServerURL',s.server_url);
+  $('deviceButton').disabled=!s.authenticated;
   renderSteps();
 }
 
 async function loadSettings() { const s=await api('/api/settings'); applySettings(s); return s; }
 
 async function checkServer(showToast=false) {
-  try { await api('/api/control-health'); $('serverHealth').className='health online'; $('serverHealth').innerHTML='<i></i><span>服务器在线</span>'; setText('metricServer','在线'); if(showToast)toast('控制服务器连接正常'); return true; }
-  catch(e) { $('serverHealth').className='health offline'; $('serverHealth').innerHTML='<i></i><span>服务器离线</span>'; setText('metricServer','离线'); if(showToast)toast(humanError(e),true); return false; }
+  try { await api('/api/control-health'); state.serverOnline=true; $('serverHealth').className='health online'; $('serverHealth').innerHTML='<i></i><span>服务器在线</span>'; setText('metricServer','在线'); renderSteps(); if(showToast)toast('控制服务器连接正常'); return true; }
+  catch(e) { state.serverOnline=false; $('serverHealth').className='health offline'; $('serverHealth').innerHTML='<i></i><span>服务器离线</span>'; setText('metricServer','离线'); renderSteps(); if(showToast)toast(humanError(e),true); return false; }
 }
 
 async function doctor(showToast=false) {
@@ -101,12 +103,23 @@ async function refreshStatus(showToast=false) { try { const v=await api('/api/st
 
 function renderSteps() {
   const s=state.settings||{}; const steps=[];
-  steps.push({done:true,title:'配置控制服务器',text:s.server_url||'请设置服务器地址',page:'settings'});
+  steps.push({done:state.serverOnline,title:'连接控制服务器',text:state.serverOnline?'服务器连接正常':'填写或检查服务器地址',page:'settings'});
   steps.push({done:s.authenticated,title:'登录账户',text:s.authenticated?`已登录 ${s.username}`:'注册或登录控制服务器',page:'account'});
   steps.push({done:Boolean(s.device_id),title:'注册设备',text:s.device_id?'设备已就绪':'自动登记 LAN IP 与 WireGuard 公钥',page:'account'});
   if(s.role==='provider')steps.push({done:Boolean(state.status?.sessions?.some(x=>x.state?.role==='provider'&&!x.state?.completed)),title:'初始化 Provider 网关',text:'创建安全隧道、转发与 NAT',page:'provider'});
   else steps.push({done:Boolean(state.currentSession),title:'连接授权流量',text:'先预览网络改动，再建立连接',page:'consumer'});
   $('nextSteps').replaceChildren(...steps.map((step,index)=>{const b=document.createElement('button');b.className=`step ${step.done?'done':''}`;b.innerHTML=`<i>${step.done?'✓':index+1}</i><span><strong></strong><small></small></span><em>›</em>`;b.querySelector('strong').textContent=step.title;b.querySelector('small').textContent=step.text;b.onclick=()=>gotoPage(step.page);return b;}));
+  const completed=steps.filter(x=>x.done).length, next=steps.find(x=>!x.done);
+  setText('setupProgress',`${completed} / ${steps.length}`);
+  setText('heroKicker',s.role==='provider'?'PROVIDER · 提供网络':'CONSUMER · 使用网络');
+  setText('heroTitle',s.role==='provider'?'让这台电脑成为同学可信的网络出口':'通过同学授权的 Provider 安全联网');
+  setText('heroText',next?`下一步：${next.title}。${next.text}。`:(s.role==='provider'?'网关已经就绪，现在可以创建或管理流量授权。':'连接已经建立，可在“当前连接”查看流量和安全断开。'));
+  $('primaryAction').dataset.page=next?.page||(s.role==='provider'?'provider':'session');
+  $('primaryAction').textContent=next?`下一步：${next.title}`:(s.role==='provider'?'管理流量授权':'查看当前连接');
+  const ready=Boolean(s.authenticated&&s.device_id);
+  $('previewInit').disabled=!ready;
+  $('applyInit').disabled=!ready||!state.initPreviewed;
+  $('shareButton').disabled=!ready;
 }
 
 $('saveSettings').onclick=async()=>{try{const s=await api('/api/settings','POST',{role:$('role').value,server_url:$('serverURL').value,device_name:$('deviceName').value});applySettings(s);await checkServer();toast('设置已保存')}catch(e){toast(humanError(e),true)}};
@@ -122,7 +135,7 @@ function renderPlan(target, preview) {
   actions.forEach((a,i)=>{const row=document.createElement('div');row.className='plan-row';row.innerHTML=`<i>${i+1}</i><div><strong></strong><span></span></div>`;row.querySelector('strong').textContent=a.description;row.querySelector('span').textContent=a.resource||'';root.append(row)});
 }
 $('previewInit').onclick=async()=>{try{const v=await api('/api/provider/init','POST',{apply:false});renderPlan('initSummary',v);state.initPreviewed=true;$('applyInit').disabled=false;toast('预览完成，尚未修改网络')}catch(e){toast(humanError(e),true)}};
-$('applyInit').onclick=async()=>{if(!state.initPreviewed||!confirm('将以管理员权限创建 WireGuard、转发、NAT 与防火墙规则。确认继续？'))return;try{const v=await api('/api/provider/init','POST',{apply:true});renderPlan('initSummary',v);$('providerState').textContent='网关运行中';$('providerState').className='chip success';$('applyInit').disabled=true;toast('Provider 网关初始化完成');await refreshStatus()}catch(e){toast(humanError(e),true)}};
+$('applyInit').onclick=async()=>{if(!state.initPreviewed||!confirm('将以管理员权限创建 WireGuard、转发、NAT 与防火墙规则。确认继续？'))return;try{const v=await api('/api/provider/init','POST',{apply:true});renderPlan('initSummary',v);state.initPreviewed=false;$('providerState').textContent='网关运行中';$('providerState').className='chip success';$('applyInit').disabled=true;toast('Provider 网关初始化完成');await refreshStatus()}catch(e){toast(humanError(e),true)}};
 $('shareButton').onclick=async()=>{try{const quota=Number($('quota').value),hours=Number($('hours').value);if(!(quota>0)||!(hours>0))throw new Error('额度和有效期必须大于 0');await api('/api/share','POST',{receiver:$('receiver').value.trim(),quota_bytes:Math.round(quota*1e9),hours});$('receiver').value='';toast('私有共享已创建');await providerShares()}catch(e){toast(humanError(e),true)}};
 
 function progress(used,total){return Math.min(100,Math.max(0,total?used/total*100:0));}

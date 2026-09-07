@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -52,6 +53,15 @@ func TestLocalHostAndCSRFProtection(t *testing.T) {
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatalf("local index: %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`id="primaryAction"`)) || !bytes.Contains(w.Body.Bytes(), []byte("按顺序完成这些步骤")) {
+		t.Fatal("guided first-run UI is missing")
+	}
+	r = httptest.NewRequest(http.MethodGet, "http://127.0.0.1:9080/assets/guided.css", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("guided stylesheet: %d", w.Code)
 	}
 	r = httptest.NewRequest(http.MethodGet, "http://evil.example/", nil)
 	w = httptest.NewRecorder()

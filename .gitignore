@@ -1,5 +1,6 @@
 /bin/
 /dist/
+/release/TrafficShare-Windows-x64/
 /.runtime/
 /.tools/
 /*.db

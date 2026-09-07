@@ -1,0 +1,65 @@
+.onboarding-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, .55fr);
+}
+
+.guide-panel {
+  border-top: 3px solid #1db29c;
+}
+
+.progress-count {
+  flex: none;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #e0f5ef;
+  color: #087a6e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.flow-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 15px 20px;
+  border: 1px solid #d8e8e5;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.flow-strip > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.flow-strip b {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #dff4ef;
+  color: #087a6e;
+  font-size: 12px;
+}
+
+.flow-strip span,
+.flow-strip strong,
+.flow-strip small {
+  display: block;
+}
+
+.flow-strip strong { font-size: 12px; }
+.flow-strip small { margin-top: 3px; color: #7d8c91; font-size: 10px; }
+.flow-strip > i { color: #91aaa7; font-style: normal; }
+input:disabled, select:disabled { color: #53666c; background: #edf2f1; cursor: not-allowed; }
+
+@media (max-width: 850px) {
+  .onboarding-grid { grid-template-columns: 1fr; }
+  .flow-strip { align-items: flex-start; flex-direction: column; }
+  .flow-strip > i { display: none; }
+}

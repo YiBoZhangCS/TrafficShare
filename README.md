@@ -14,17 +14,17 @@ Windows x64 用户可直接下载仓库中的 [`release/TrafficShare-Windows-x64
 
 1. 解压发布包。
 2. 双击 `TrafficShare-Host.exe`，接受 Windows UAC。
-3. 浏览器会自动打开 `http://127.0.0.1:9080`。
+3. TrafficShare 会打开自己的桌面窗口，不再调用外部浏览器；关闭窗口即退出程序和后台监控。
 4. 在“设置”确认角色为 Provider；注册或登录，填写设备名并注册设备。
 5. 在“提供流量”先点“预览改动”，确认后点“应用初始化”。
 6. 输入 B 使用的用户名、额度和有效期，创建私有授权。
-7. 保持程序和浏览器后台页面运行。
+7. 使用期间保持 TrafficShare 窗口运行。
 
 ### B：Consumer
 
 1. 解压同一个发布包。
 2. 双击 `TrafficShare-Client.exe`，接受 Windows UAC。
-3. 浏览器会自动打开 `http://127.0.0.1:9081`。
+3. 在 TrafficShare 桌面窗口中继续设置；关闭窗口即退出程序。
 4. 在“设置”将控制服务器填为 `http://A的校园网IPv4:8787`，保存并测试连接。
 5. 用 A 授权的 B 用户名登录，填写设备名并注册设备。
 6. 在“可用流量”先点“预览改动”，再点“连接”。
@@ -46,7 +46,8 @@ Windows x64 用户可直接下载仓库中的 [`release/TrafficShare-Windows-x64
 
 ## 已实现能力
 
-- 美观、响应式、纯本地 Web UI，只监听 `127.0.0.1`，无需 Electron/Node。
+- 基于 Microsoft Edge WebView2 的独立桌面窗口；本地 UI 只监听 `127.0.0.1`，无需外部浏览器、Electron 或 Node。
+- PowerShell、WireGuard 等后台命令均使用隐藏窗口启动，不再反复弹出空白控制台。
 - 首次设置、账号注册/登录、设备注册、Provider 初始化、私有流量授权、连接/断开、状态和日志均可在 UI 完成。
 - 所有网络修改必须先 dry-run 预览；真实应用需要二次确认。
 - 官方 WireGuard for Windows 隧道服务；Provider IPv4 forwarding、NetNat 和按当前网络配置文件创建的 UDP 防火墙规则。
@@ -75,7 +76,9 @@ Windows x64 用户可直接下载仓库中的 [`release/TrafficShare-Windows-x64
 
 ## 构建与验证
 
-源码构建需要 Go 1.26 或更新版本：
+运行环境需要 Windows 10/11 x64、WireGuard for Windows 和 Microsoft Edge WebView2 Runtime。Windows 11 及多数仍受支持的 Windows 10 环境已经包含 WebView2；如果系统缺失，程序会给出明确错误。
+
+源码构建需要 Go 1.26 或更新版本，以及 MinGW-w64 C/C++ 工具链：
 
 ```powershell
 .\scripts\build.ps1

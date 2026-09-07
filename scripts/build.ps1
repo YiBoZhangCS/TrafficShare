@@ -1,10 +1,19 @@
 [CmdletBinding()]
 param(
     [string]$OutputDir = ".\dist\TrafficShare-Windows-x64",
-    [string]$GoExe = "go.exe"
+    [string]$GoExe = "go.exe",
+    [string]$MinGWBin = "C:\msys64\ucrt64\bin"
 )
 
 $ErrorActionPreference = "Stop"
+$gcc = Join-Path $MinGWBin "gcc.exe"
+$gxx = Join-Path $MinGWBin "g++.exe"
+if (-not (Test-Path -LiteralPath $gcc) -or -not (Test-Path -LiteralPath $gxx)) {
+    throw "MinGW-w64 is required to build the WebView2 desktop window. Expected: $MinGWBin"
+}
+$env:Path = $MinGWBin + ";" + $env:Path
+$env:CC = $gcc
+$env:CXX = $gxx
 $go = Get-Command $GoExe -ErrorAction SilentlyContinue
 if (-not $go) { throw "Go 1.26 or newer is required to build from source." }
 
@@ -40,6 +49,7 @@ if ($LASTEXITCODE -ne 0) { throw "CLI build failed" }
 
 Copy-Item -LiteralPath README.md -Destination "$OutputDir\README.md" -Force
 Copy-Item -LiteralPath SECURITY.md -Destination "$OutputDir\SECURITY.md" -Force
+Copy-Item -LiteralPath THIRD_PARTY_NOTICES.md -Destination "$OutputDir\THIRD_PARTY_NOTICES.md" -Force
 Copy-Item -LiteralPath configs\server-cloud.example.json -Destination "$OutputDir\server-cloud.example.json" -Force
 
 $resolved = Resolve-Path $OutputDir

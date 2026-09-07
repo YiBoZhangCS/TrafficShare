@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -16,6 +17,7 @@ import (
 
 	"trafficshare/internal/config"
 	"trafficshare/internal/database"
+	"trafficshare/internal/desktop"
 	"trafficshare/internal/logging"
 	"trafficshare/internal/state"
 	"trafficshare/internal/traffic"
@@ -198,6 +200,33 @@ func (c *LocalController) Logs() string {
 	return string(b)
 }
 
+// Shutdown restores every TrafficShare-owned network change before a normal
+// desktop-window exit. Forced termination is still recovered on the next run.
+func (c *LocalController) Shutdown(ctx context.Context) error {
+	a := c.app()
+	snapshots, err := (state.Store{Dir: a.Config.Agent.StateDir}).Incomplete()
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, snapshot := range snapshots {
+		if _, err := a.Disconnect(ctx, snapshot.SessionID, false); err != nil {
+			errs = append(errs, fmt.Errorf("restore %s: %w", snapshot.SessionID, err))
+			continue
+		}
+		if snapshot.Role == "consumer" && a.Config.Agent.Token != "" {
+			if err := a.api().Disconnect(ctx, snapshot.SessionID); err != nil {
+				// Local recovery already succeeded. The control server will expire the
+				// stale heartbeat, so a transient server outage must not block exit.
+				if a.Logger != nil {
+					a.Logger.Error(snapshot.SessionID, "server session will expire after local shutdown", err)
+				}
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
 func (c *LocalController) Monitor(ctx context.Context) {
 	a := c.app()
 	interval := a.Config.Agent.PollInterval
@@ -310,6 +339,7 @@ func (c CLI) ui(ctx context.Context, args []string) error {
 	role := fs.String("role", "", "lock UI to provider or consumer role")
 	serverURL := fs.String("server-url", "", "override control server URL")
 	openUI := fs.Bool("open-browser", false, "open the local UI in the default browser")
+	desktopUI := fs.Bool("desktop", false, "open the UI in an embedded desktop window")
 	embeddedServer := fs.Bool("embedded-server", false, "show that this process owns the embedded control server")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -343,13 +373,63 @@ func (c CLI) ui(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	go controller.Monitor(ctx)
+	uiCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go controller.Monitor(uiCtx)
 	uiURL := "http://" + cfg.Agent.UIListen
 	fmt.Fprintf(c.Stdout, "TrafficShare local UI: %s\n", uiURL)
+	if *desktopUI {
+		errCh := make(chan error, 1)
+		go func() { errCh <- webui.ListenAndServe(uiCtx, cfg.Agent.UIListen, server.Handler()) }()
+		if err := waitForLocalUI(uiCtx, uiURL, errCh); err != nil {
+			return err
+		}
+		windowErr := desktop.Run(uiCtx, "TrafficShare", uiURL)
+		cancel()
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		cleanupErr := controller.Shutdown(cleanupCtx)
+		cleanupCancel()
+		var serverErr error
+		select {
+		case serverErr = <-errCh:
+		case <-time.After(6 * time.Second):
+			serverErr = errors.New("local UI server did not stop after closing the window")
+		}
+		return errors.Join(windowErr, cleanupErr, serverErr)
+	}
 	if *openUI {
 		go openBrowser(uiURL)
 	}
 	return webui.ListenAndServe(ctx, cfg.Agent.UIListen, server.Handler())
+}
+
+func waitForLocalUI(ctx context.Context, target string, serverErrors <-chan error) error {
+	client := http.Client{Timeout: 400 * time.Millisecond}
+	ticker := time.NewTicker(80 * time.Millisecond)
+	deadline := time.NewTimer(6 * time.Second)
+	defer ticker.Stop()
+	defer deadline.Stop()
+	for {
+		select {
+		case err := <-serverErrors:
+			if err == nil {
+				return errors.New("local UI server stopped before the desktop window opened")
+			}
+			return err
+		case <-ticker.C:
+			resp, err := client.Get(target)
+			if err == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					return nil
+				}
+			}
+		case <-deadline.C:
+			return errors.New("local UI did not become ready")
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func openBrowser(target string) {
